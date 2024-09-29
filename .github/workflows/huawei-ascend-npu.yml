@@ -83,6 +83,7 @@ jobs:
     - name: Install deepspeed
       run: |
         source /root/.bashrc
+        pip list
         pip install .[1bit,npu,autotuning,inf] -i  https://pypi.tuna.tsinghua.edu.cn/simple
         ds_report
 
