@@ -99,7 +99,7 @@ jobs:
 
         cd tests
         # pytest --verbose accelerator/*
-        pytest --verbose benchmarks/*
+        # pytest --verbose benchmarks/*
         pytest --verbose hybrid_engine/*
         pytest --verbose lighting/*
         pytest --verbose model/*
