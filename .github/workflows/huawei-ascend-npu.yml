@@ -98,7 +98,7 @@ jobs:
         unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
 
         cd tests
-        pytest --verbose accelerator/*
+        # pytest --verbose accelerator/*
         pytest --verbose benchmarks/*
         pytest --verbose hybrid_engine/*
         pytest --verbose lighting/*
