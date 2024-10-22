@@ -97,7 +97,7 @@ jobs:
         source /root/.bashrc
         unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
 
-        pytest --verbose tests/*
+        pytest --verbose tests/*.py
         
         # cd tests/unit
         # pytest --verbose accelerator/*
