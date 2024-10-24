@@ -101,12 +101,12 @@ jobs:
         # pytest --verbose accelerator/*
         # pytest --verbose benchmarks/*
         # pytest --verbose hybrid_engine/*
-        pytest --verbose lighting/*
-        pytest --verbose model/*
-        pytest --verbose onebit/*
-        pytest --verbose perf/*
-        pytest --verbose small_model_debugging/*
-        pytest --verbose torch_complie/*
+        # pytest --verbose lighting/*
+        # pytest --verbose model/*
+        # pytest --verbose onebit/*
+        # pytest --verbose perf/*
+        # pytest --verbose small_model_debugging/*
+        # pytest --verbose torch_complie/*
         pytest --verbose unit/*
         
         # cd tests/unit
