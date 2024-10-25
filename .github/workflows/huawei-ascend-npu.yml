@@ -11,6 +11,9 @@ on:
       - 'requirements/**'
   schedule:
     - cron: "0 0 * * *"
+  push:
+    paths:
+      - '.github/workflows/huawei-ascend-npu.yml'
   
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
