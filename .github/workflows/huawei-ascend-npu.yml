@@ -110,7 +110,10 @@ jobs:
         # pytest --verbose perf/*
         # pytest --verbose small_model_debugging/*
         # pytest --verbose torch_complie/*
-        pytest --verbose unit/*
+        # pytest --verbose unit/*
+
+        pytest $PYTEST_OPTS --forked -n 4  unit/ 
+        pytest $PYTEST_OPTS --forked -m 'sequential' unit/
         
         # cd tests/unit
         # pytest --verbose accelerator/*
