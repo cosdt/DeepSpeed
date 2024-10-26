@@ -56,11 +56,11 @@ jobs:
     - name: Install pytorch 
       run: |
         npu-smi info
-        apt-get update   
+        apt-get update  
+        pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         source /root/.bashrc
 
-        pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes -i https://pypi.tuna.tsinghua.edu.cn/simple
-        
+        pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes
         python << EOF 
         if __name__ == '__main__':
             import torch
@@ -70,7 +70,7 @@ jobs:
             print(f"Device Count: {torch.npu.device_count()}")
             print(f"Device Available: {torch.npu.is_available()}")
         EOF
-        
+
     - name: Install transformers
       run: |
         source /root/.bashrc
@@ -78,13 +78,13 @@ jobs:
         git clone https://github.com/huggingface/transformers
         cd transformers
         git rev-parse --short HEAD
-        pip install . -i https://pypi.tuna.tsinghua.edu.cn/simple
+        pip install .
             
     - name: Install deepspeed
       run: |
         source /root/.bashrc
-        pip list
-        pip install .[1bit,npu,autotuning,inf] -i  https://pypi.tuna.tsinghua.edu.cn/simple
+        git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
+        pip install .[1bit,npu,autotuning,inf]
         ds_report
 
     - name: Python environment
