@@ -36,7 +36,8 @@ def get_quantize_weight_fn(quantizer: Quantizer, pre_quant_weight: nn.Parameter)
     def func() -> Tuple[nn.Parameter, Tensor, Tensor]:
         quantized_weights, quant_scale, quant_min = quantizer.quantize(pre_quant_weight.data)
         # A temporary hack as zero Zero3 assume all model weights has the same type. in all_gather_coalesced.get_only_unique_item
-        quantized_weights = quantized_weights.view(pre_quant_weight.dtype)
+        if quantizer.config.get('quant_format') != 'hif8':
+            quantized_weights = quantized_weights.view(pre_quant_weight.dtype)
         quant_scale = quant_scale.type(pre_quant_weight.dtype)
         quant_min = quant_min.type(pre_quant_weight.dtype)
         return quantized_weights, quant_scale, quant_min
@@ -63,8 +64,11 @@ class QuantizedLinear(nn.Linear):
 
     def forward(self, input: Tensor) -> Tensor:
         quantized_weight, quant_scale, quant_min = self.weight.deconcat(self.weight)
-        temp_dequantized_weight = self.weight.dequantizer.dequantize(quantized_weight.view(torch.uint8), quant_scale,
-                                                                     quant_min)
+        if self.config.get('quant_format') == 'hif8':
+            dequant_input = quantized_weight
+        else:
+            dequant_input = quantized_weight.view(torch.uint8)
+        temp_dequantized_weight = self.weight.dequantizer.dequantize(dequant_input, quant_scale, quant_min)
 
         # !!! Do not use torch.functional.linear(input, temp_dequantized_weight, self.bias) here as in zero3 torch.functional.linear is
         # replaced by LinearFunctionForZeroStage3. Which assume weight is non-temporary.
@@ -101,8 +105,11 @@ class QuantizedEmbedding(nn.Embedding):
 
     def forward(self, input: Tensor) -> Tensor:
         quantized_weight, quant_scale, quant_min = self.weight.deconcat(self.weight)
-        temp_dequantized_weight = self.weight.dequantizer.dequantize(quantized_weight.view(torch.uint8), quant_scale,
-                                                                     quant_min)
+        if self.config.get('quant_format') == 'hif8':
+            dequant_input = quantized_weight
+        else:
+            dequant_input = quantized_weight.view(torch.uint8)
+        temp_dequantized_weight = self.weight.dequantizer.dequantize(dequant_input, quant_scale, quant_min)
 
         return F.embedding(input, temp_dequantized_weight, self.padding_idx, self.max_norm, self.norm_type,
                            self.scale_grad_by_freq, self.sparse)

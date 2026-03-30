@@ -49,6 +49,19 @@ class Quantizer:
         assert self.config['symmetric'] == False, 'Only asymmetric quantization is supported at this moment.'
 
     def quantize(self, tensor: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
+       
+        if self.config.get('quant_format') == 'hif8':
+            from torch_npu.utils.hif8_tensor import _HiFloat8Tensor
+           
+            hif8_tensor = _HiFloat8Tensor.to_hifloat8(tensor.detach())
+
+            fake_scale = torch.ones(1, dtype=tensor.dtype, device=tensor.device)
+            fake_min = torch.zeros(1, dtype=tensor.dtype, device=tensor.device)
+
+            q_tensor = hif8_tensor.contiguous()._data
+
+            return q_tensor, fake_scale, fake_min
+
         assert tensor.shape[self.config['group_dim']] % self.config['group_size'] == 0 \
             , f'Tensor shape: {tensor.shape} quantization config {self.config}'
 
@@ -103,6 +116,13 @@ class DeQuantizer:
         assert self.config['symmetric'] == False, 'Only asymmetric quantization is supported at this moment.'
 
     def dequantize(self, tensor: Tensor, quant_scale: Tensor, quant_min: Tensor) -> Tensor:
+
+        if self.config.get('quant_format') == 'hif8':
+            from torch_npu.utils.hif8_tensor import _HiFloat8Tensor
+
+            hif8_recovered = _HiFloat8Tensor(data=tensor, dtype=self.dtype)
+            return hif8_recovered.from_hifloat8(dtype=self.dtype)
+
         # Use customized CUDA quantization kernel if possible.
         if self.config['group_size'] % 8 == 0 and \
                 (self.config['num_bits'] == 4 or self.config['num_bits'] == 8) and \
@@ -223,7 +243,8 @@ def _quantize_param(param: nn.Parameter, quant_config: Dict):
 
     quantized_weight, quant_scale, quant_min = quantizer.quantize(param.data)
 
-    quantized_weight = quantized_weight.view(param.dtype)
+    if quant_config.get('quant_format') != 'hif8':
+        quantized_weight = quantized_weight.view(param.dtype)
     quant_scale = quant_scale.view(param.dtype)
     quant_min = quant_min.view(param.dtype)
 
@@ -242,8 +263,11 @@ def wrap_quantized_functional(f):
     def wrapper(input: Tensor, weight: nn.Parameter, *args, **kwargs) -> Tensor:
         if hasattr(weight, 'weight_quantized') and getattr(weight, 'weight_quantized'):
             quantized_weight, quant_scale, quant_min = weight.deconcat(weight)
-            temp_dequantized_weight = weight.dequantizer.dequantize(quantized_weight.view(torch.uint8), quant_scale,
-                                                                    quant_min)
+            if weight.dequantizer.config.get('quant_format') == 'hif8':
+                dequant_input = quantized_weight
+            else:
+                dequant_input = quantized_weight.view(torch.uint8)
+            temp_dequantized_weight = weight.dequantizer.dequantize(dequant_input, quant_scale, quant_min)
             return f(input, temp_dequantized_weight, *args, **kwargs)
         else:
             return f(input, weight, *args, **kwargs)
@@ -265,7 +289,8 @@ def wrap_load_from_state_dict(f):
             key = prefix + 'weight'
             if key in state_dict:
                 quantized_weight, quant_scale, quant_min = model.weight.quantizer.quantize(state_dict[key])
-                quantized_weight = quantized_weight.view(model.weight.dtype)
+                if model.weight.quantizer.config.get('quant_format') != 'hif8':
+                    quantized_weight = quantized_weight.view(model.weight.dtype)
                 quant_scale = quant_scale.view(model.weight.dtype)
                 quant_min = quant_min.view(model.weight.dtype)
 
