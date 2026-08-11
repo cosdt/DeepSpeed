@@ -337,6 +337,9 @@ class DeepSpeedEngine(Module):
         # Configure distributed model
         self._configure_distributed_model(model)
 
+        # HiFloat8 training: replace nn.Linear with HiFloat8Linear on NPU
+        self._configure_hifloat8(model)
+
         # These hooks should be disabled later if DeepCompile is not active.
         self.module_forward_pre_hook = self._create_module_forward_pre_hook()
         self.module_forward_post_hook = self._create_module_forward_post_hook()
@@ -1325,6 +1328,9 @@ class DeepSpeedEngine(Module):
         module_names = self._config.torch_autocast_lower_precision_safe_modules
         return get_default_autocast_lower_precision_modules() if module_names is None else module_names
 
+    def hifloat8_enabled(self) -> bool:
+        return self._config.hifloat8_enabled
+
     def fp16_auto_cast(self):
         return self._config.float16_config.auto_cast
 
@@ -1906,6 +1912,14 @@ class DeepSpeedEngine(Module):
             param.ds_zero_partition_process_group = partition_group
             param.ds_zero_partition_rank = dist.get_rank(group=partition_group)
             param.ds_zero_partition_world_size = dist.get_world_size(group=partition_group)
+
+    def _configure_hifloat8(self, model):
+        if not self.hifloat8_enabled():
+            return
+        from deepspeed.runtime.hifloat8 import convert_to_hifloat8_training
+        converted = convert_to_hifloat8_training(model)
+        self._set_client_model(converted)
+        logger.info("HiFloat8 training: nn.Linear layers replaced with HiFloat8Linear.")
 
     # check if parameters are duplicated in optimizer param_groups
     def _check_for_duplicates(self, optimizer):
