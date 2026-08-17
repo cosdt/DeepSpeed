@@ -516,6 +516,17 @@ def get_hybrid_engine_config(param_dict):
     return hybrid_engine_config
 
 
+HIFLOAT8 = "hifloat8"
+HIFLOAT8_ENABLED = "enabled"
+HIFLOAT8_ENABLED_DEFAULT = False
+
+
+def get_hifloat8_config(param_dict):
+    if HIFLOAT8 in param_dict:
+        return get_scalar_param(param_dict[HIFLOAT8], HIFLOAT8_ENABLED, HIFLOAT8_ENABLED_DEFAULT)
+    return False
+
+
 def get_expert_data_topo_config(param_dict):
     return get_scalar_param(param_dict, USE_DATA_BEFORE_EXPERT_PARALLEL, USE_DATA_BEFORE_EXPERT_PARALLEL_DEFAULT)
 
@@ -856,6 +867,7 @@ class DeepSpeedConfig(object):
 
         self.use_data_before_expert_parallel_ = get_expert_data_topo_config(param_dict)
         self.hybrid_engine = get_hybrid_engine_config(param_dict)
+        self.hifloat8_enabled = get_hifloat8_config(param_dict)
 
         self.sparse_attention = get_sparse_attention(param_dict)
         self.pipeline = get_pipeline_config(param_dict)

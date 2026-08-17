@@ -102,6 +102,19 @@ def configure(
         comms_logger.debug = debug
 
 
+def _log_comm_tensor_dtypes(op_name, tensors):
+    """调试用：打印分布式传输时 tensor 的 dtype、shape 以及当前 rank。"""
+    if is_initialized():
+        rank = get_rank()
+    else:
+        rank = -1
+    if not isinstance(tensors, (list, tuple)):
+        tensors = [tensors]
+    for t in tensors:
+        if t is not None and hasattr(t, "dtype"):
+            print(f"[COMM {op_name}] rank={rank} dtype={t.dtype} shape={tuple(t.shape)}", flush=True)
+
+
 # Logging wrapper for timing ops
 def timed_op(func):
 
@@ -226,6 +239,7 @@ def set_backend():
 @timed_op
 def broadcast(tensor, src, group=None, async_op=False, prof=False, log_name='broadcast', debug=get_caller_func()):
     global cdb
+    _log_comm_tensor_dtypes("broadcast", tensor)
     return cdb.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
 
 
@@ -244,6 +258,7 @@ def all_gather(tensor_list,
                log_name='all_gather',
                debug=get_caller_func()):
     global cdb
+    _log_comm_tensor_dtypes("all_gather", tensor)
     return cdb.all_gather(tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op)
 
 
@@ -303,6 +318,7 @@ def reduce_scatter_tensor(output_tensor,
                           log_name='reduce_scatter_tensor',
                           debug=get_caller_func()):
     global cdb
+    _log_comm_tensor_dtypes("reduce_scatter_tensor", [output_tensor, tensor])
     return cdb.reduce_scatter_tensor(output_tensor=output_tensor,
                                      input_tensor=tensor,
                                      op=op,
@@ -319,6 +335,7 @@ def all_gather_into_tensor(output_tensor,
                            log_name='all_gather_into_tensor',
                            debug=get_caller_func()):
     global cdb
+    _log_comm_tensor_dtypes("all_gather_into_tensor", [output_tensor, tensor])
     return cdb.all_gather_into_tensor(output_tensor=output_tensor, input_tensor=tensor, group=group, async_op=async_op)
 
 
@@ -614,6 +631,7 @@ def reduce_scatter(output,
                    log_name='reduce_scatter',
                    debug=get_caller_func()):
     global cdb
+    _log_comm_tensor_dtypes("reduce_scatter", [output] + list(input_list))
     return cdb.reduce_scatter(output=output, input_list=input_list, op=op, group=group, async_op=async_op)
 
 
@@ -638,6 +656,7 @@ def all_gather_coalesced(output_tensors, input_tensors, group=None, async_op=Fal
     global cdb
     assert cdb is not None and cdb.is_initialized(
     ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
+    _log_comm_tensor_dtypes("all_gather_coalesced", input_tensors)
     return cdb.all_gather_coalesced(output_tensors, input_tensors, group=group, async_op=async_op)
 
 
@@ -655,6 +674,7 @@ def all_reduce(tensor,
     # TensorBoard logging for comm calls.?
     global cdb
     #print(f'op = {op}, cdb= {cdb.name}')
+    _log_comm_tensor_dtypes("all_reduce", tensor)
     return cdb.all_reduce(tensor, op, group, async_op)
 
 
@@ -679,6 +699,7 @@ def all_reduce_coalesced(tensors,
                          log_name='all_reduce',
                          debug=get_caller_func()):
     global cdb
+    _log_comm_tensor_dtypes("all_reduce_coalesced", tensors)
     return cdb.all_reduce_coalesced(tensors, op, group, async_op)
 
 
