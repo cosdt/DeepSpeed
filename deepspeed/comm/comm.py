@@ -112,15 +112,7 @@ def _log_comm_tensor_dtypes(op_name, tensors):
         tensors = [tensors]
     for t in tensors:
         if t is not None and hasattr(t, "dtype"):
-            ttype = type(t).__name__
-            extra = ""
-            if "DTensor" in ttype:
-                # DTensor：额外打印 placements 与 mesh，判断是数据并行切分还是张量并行
-                placements = getattr(t, "placements", None)
-                mesh = getattr(getattr(t, "device_mesh", None), "mesh", None)
-                extra = f" placements={placements} mesh={mesh}"
-            print(f"[COMM {op_name}] rank={rank} type={ttype} dtype={t.dtype} shape={tuple(t.shape)}{extra}",
-                  flush=True)
+            print(f"[COMM {op_name}] rank={rank} dtype={t.dtype} shape={tuple(t.shape)}", flush=True)
 
 
 # Logging wrapper for timing ops
