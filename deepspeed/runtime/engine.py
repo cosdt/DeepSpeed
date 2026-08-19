@@ -340,6 +340,9 @@ class DeepSpeedEngine(Module):
         # HiFloat8 training: replace nn.Linear with HiFloat8Linear on NPU
         self._configure_hifloat8(model)
 
+        # MXFP8 training: replace nn.Linear with MxFP8Linear on NPU
+        self._configure_mxfp8(model)
+
         # These hooks should be disabled later if DeepCompile is not active.
         self.module_forward_pre_hook = self._create_module_forward_pre_hook()
         self.module_forward_post_hook = self._create_module_forward_post_hook()
@@ -1331,6 +1334,9 @@ class DeepSpeedEngine(Module):
     def hifloat8_enabled(self) -> bool:
         return self._config.hifloat8_enabled
 
+    def mxfp8_enabled(self) -> bool:
+        return self._config.mxfp8_enabled
+
     def fp16_auto_cast(self):
         return self._config.float16_config.auto_cast
 
@@ -1920,6 +1926,14 @@ class DeepSpeedEngine(Module):
         converted = convert_to_hifloat8_training(model)
         self._set_client_model(converted)
         logger.info("HiFloat8 training: nn.Linear layers replaced with HiFloat8Linear.")
+
+    def _configure_mxfp8(self, model):
+        if not self.mxfp8_enabled():
+            return
+        from deepspeed.runtime.mxfp8 import convert_to_mxfp8_training
+        converted = convert_to_mxfp8_training(model)
+        self._set_client_model(converted)
+        logger.info("MXFP8 training: nn.Linear layers replaced with MxFP8Linear.")
 
     # check if parameters are duplicated in optimizer param_groups
     def _check_for_duplicates(self, optimizer):
